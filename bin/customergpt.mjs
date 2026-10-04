@@ -1,0 +1,119 @@
+#!/usr/bin/env node
+import { pathToFileURL } from 'node:url';
+import { readFile } from 'node:fs/promises';
+
+import {connection, readConfig, saveConfig, DEFAULT_BASE, normalizeBase, profiles} from '../lib/config.mjs';
+import {doctor} from '../lib/diagnostics.mjs';
+import {browserLogin, logout} from '../lib/login.mjs';
+import {parseCommand, help, commands} from '../lib/commands.mjs';
+import {request, waitForJob} from '../lib/index.mjs';
+export {request, waitForJob} from '../lib/index.mjs';
+const {version} = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+
+async function mcp(options) {
+  const {Server} = await import('@modelcontextprotocol/sdk/server/index.js');
+  const {StdioServerTransport} = await import('@modelcontextprotocol/sdk/server/stdio.js');
+  const {ListToolsRequestSchema,CallToolRequestSchema} = await import('@modelcontextprotocol/sdk/types.js');
+  const server = new Server({name:'customergpt-cli',version}, {capabilities:{tools:{}}});
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    const credentials = await connection();
+    const catalog = await request(undefined,undefined,options);
+    return {tools:catalog.actions.filter(a => credentials.key || a.authentication === 'optional').map(({authentication,...tool}) => tool)};
+  });
+  server.setRequestHandler(CallToolRequestSchema, async call => {
+    try { return {content:[{type:'text',text:JSON.stringify(await request(call.params.name,call.params.arguments || {},options))}]}; }
+    catch(error) { return {isError:true,content:[{type:'text',text:JSON.stringify({ok:false,error:{code:error.code || 'REQUEST_FAILED',message:error.message}})}]}; }
+  });
+  await server.connect(new StdioServerTransport());
+}
+
+export async function main(args) {
+  const options = {};
+  let quiet = false;
+  for (let i=0;i<args.length;i++) {
+    const flag=args[i];
+    if (['--debug','--quiet','-q'].includes(flag)) {
+      if(flag==='--debug') options.debug=true; else quiet=true;
+      args=[...args.slice(0,i),...args.slice(i+1)]; i--; continue;
+    }
+    if(['--timeout','--profile','-p'].includes(flag)) {
+      const value=args[i+1];
+      if(!value || value.startsWith('-')) throw new Error(flag+' requires a value');
+      if(flag==='--timeout') {
+        const seconds=Number(value);
+        if(!Number.isFinite(seconds) || seconds<=0 || seconds>86400) throw new Error('--timeout must be between 0 and 86400 seconds (exclusive of zero)');
+        options.timeoutMs=options.requestTimeoutMs=Math.max(1,Math.round(seconds*1000));
+      } else {
+        if(!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(value)) throw new Error('Invalid profile name');
+        process.env.CUSTOMERGPT_PROFILE=value;
+      }
+      args=[...args.slice(0,i),...args.slice(i+2)]; i--;
+    }
+  }
+  const baseIndex = args.indexOf('--api-base');
+  if (baseIndex !== -1) {
+    if (!args[baseIndex+1]) throw new Error('--api-base requires an origin');
+    process.env.CUSTOMERGPT_API_URL = normalizeBase(args[baseIndex+1]);
+    args = [...args.slice(0,baseIndex),...args.slice(baseIndex+2)];
+  }
+  if (args.length === 1 && ['--version', '-v'].includes(args[0])) { console.log(version); return; }
+  if (!args.length || args.includes('--help') || args.includes('-h') || args[0] === 'help') {
+    const prefix = args.filter(a => !['--help','-h','help'].includes(a)).join(' ');
+    console.log(help(prefix)); return;
+  }
+  if (args[0] === 'doctor') { const result=await doctor(version,options); console.log(JSON.stringify(result)); if(!result.ok) process.exitCode=1; return; }
+  if (args[0] === 'profiles') { if(args.length>3) throw new Error('Too many profile arguments'); console.log(JSON.stringify({ok:true,data:await profiles(args[1],args[2])})); return; }
+  if (args[0] === 'login') {
+    if (args.slice(1).some(a => !['--no-browser','--token-stdin'].includes(a))) throw new Error('Use login [--no-browser | --token-stdin] [--api-base <origin>]');
+    const saved = await readConfig();
+    const base = normalizeBase(process.env.CUSTOMERGPT_API_URL || saved.base || DEFAULT_BASE);
+    if (args.includes('--token-stdin')) {
+      if (process.stdin.isTTY) throw new Error('Pipe your API key to login --token-stdin; do not pass it as an argument');
+      let key = ''; for await (const chunk of process.stdin) { key += chunk; if (key.length > 8192) throw new Error('API key is too long'); }
+      key = key.trim(); if (!key) throw new Error('API key is empty');
+      await request('account_usage', {}, {...options,base, key});
+      await saveConfig({base,key});
+    } else await browserLogin(base,{noBrowser:args.includes('--no-browser'),timeoutMs:options.timeoutMs});
+    console.log(JSON.stringify({ok:true,data:{message:'Logged in. Run customergpt chatbots list.',base}})); return;
+  }
+  if (args[0] === 'logout') { await logout(); console.log(JSON.stringify({ok:true,data:{message:'Saved session removed. Environment API keys are not changed.'}})); return; }
+  if (args[0] === 'agent-guide') {
+    console.log(JSON.stringify({workflow:['customergpt login','customergpt chatbots create "Support Bot" --url https://example.com --yes','customergpt knowledge website add https://example.com --chatbot <id> --yes --wait','customergpt messages send "What do you offer?" --chatbot <id> --yes','customergpt installation snippet --chatbot <id>'],anonymous:'customergpt onboarding start https://example.com --yes --wait',commands,notes:['Use your own CustomerGPT account.','Return the preview URL to the human to claim anonymous drafts.','Never expose tokens. Use --dry-run before changes.']})); return;
+  }
+  if (args[0] === 'mcp') return mcp(options);
+  if (!['call','actions'].includes(args[0])) args = parseCommand(args);
+  if (args[0] === 'actions' && args.length === 1) { console.log(JSON.stringify(await request(undefined,undefined,options))); return; }
+  let action, input = {}, flags;
+  if (args[0] === 'onboarding' && args[1] === 'start' && args[2]) {
+    action = 'onboarding_start'; input = {url:args[2]}; flags = args.slice(3);
+  } else if (args[0] === 'call' && args[1]) { action = args[1]; flags = args.slice(2); }
+  else throw new Error('Unknown command; use --help');
+  let wait = false;
+  for (let i=0;i<flags.length;i++) {
+    const flag = flags[i];
+    if (flag === '--json' || flag === '--json-file') {
+      const value = flags[++i];
+      if (!value) throw new Error(flag + ' requires a value');
+      const data = JSON.parse(flag === '--json-file' ? await readFile(value, 'utf8') : value);
+      if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('--json must be an object');
+      input = {...input,...data};
+    } else if (flag === '--wait') wait = true;
+    else if (!['--yes','--dry-run'].includes(flag)) throw new Error('Unknown option: ' + flag);
+  }
+  if (flags.includes('--yes')) input.confirm = true;
+  if (flags.includes('--dry-run')) { input.dryRun = true; input.confirm = false; }
+  const result = await request(action,input,options);
+  if (wait && result.data?.id && ['pending','running'].includes(result.data.status)) {
+    // Report the handle immediately on stderr so a interrupted process can be resumed.
+    if(!quiet) console.error(JSON.stringify({event:'job_started',data:result.data}));
+    result.data = await waitForJob(result.data,options);
+  }
+  console.log(JSON.stringify(result));
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main(process.argv.slice(2)).catch(error => {
+    console.error(JSON.stringify({ok:false,error:{code:error.code || 'CLI_ERROR',message:error.message,...(error.hint ? {hint:error.hint} : {})}, ...(error.job ? {job:error.job} : {})}));
+    process.exitCode = 1;
+  });
+}

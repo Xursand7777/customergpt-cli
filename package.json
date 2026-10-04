@@ -1,0 +1,55 @@
+{
+  "name": "@customergpt/cli",
+  "version": "0.3.0",
+  "description": "Official CustomerGPT CLI — create, train, test and install AI support bots from your terminal and AI agents.",
+  "type": "module",
+  "bin": {
+    "customergpt": "bin/customergpt.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.0"
+  },
+  "main": "./lib/index.mjs",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.mjs"
+    }
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "customergpt",
+    "cli",
+    "mcp",
+    "chatbot",
+    "ai",
+    "ai-agent",
+    "customer-support",
+    "knowledge-base"
+  ],
+  "homepage": "https://customergpt.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xursand7777/customergpt-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Xursand7777/customergpt-cli/issues"
+  }
+}
