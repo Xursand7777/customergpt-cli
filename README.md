@@ -84,6 +84,18 @@ customergpt knowledge website add https://example.com --chatbot BOT_ID --yes --w
 
 The default crawl reads up to five same-origin pages. Use `--max-pages 20` for a larger crawl. Training is limited to 50,000 characters per job; this crawler does not execute JavaScript. Review returned warnings for skipped or truncated content.
 
+Pick the pages yourself instead of crawling:
+
+```bash
+# exactly these pages (up to 20), no link following
+customergpt knowledge links add https://example.com/pricing https://example.com/faq --chatbot BOT_ID --yes --wait
+
+# pages listed in your sitemap (same site only; sitemap indexes are followed)
+customergpt knowledge sitemap add https://example.com/sitemap.xml --chatbot BOT_ID --max-pages 20 --yes --wait
+```
+
+`knowledge documents resync` repeats a link list or sitemap the way it was added. Compressed `sitemap.xml.gz` files are not supported.
+
 ### 4. Test an answer
 
 ```bash
@@ -174,7 +186,7 @@ Every request identifies the client with an `X-CustomerGPT-Client: cli/<version>
 | Account | `login`, `logout`, `whoami`, `usage`, `profiles list`, `profiles use`, `dashboard` |
 | Diagnostics | `doctor` |
 | Bots | `chatbots list`, `get`, `create`, `update`, `delete` |
-| Training | `knowledge website add`, `knowledge text add` |
+| Training | `knowledge website add`, `knowledge links add`, `knowledge sitemap add`, `knowledge text add` |
 | Sources | `knowledge documents list`, `resync`, `delete` |
 | Preview | `messages send` |
 | Website installation | `installation snippet` |

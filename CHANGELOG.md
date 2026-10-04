@@ -2,6 +2,14 @@
 
 All notable changes to `@customergpt/cli` are documented here. This project follows [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Added
+
+- `knowledge links add <url> [url…]` trains on exactly the listed pages (up to 20) without following their links.
+- `knowledge sitemap add <sitemap-url>` trains on pages listed in a `sitemap.xml` on the same site, following a sitemap index; `--max-pages` caps it.
+- `knowledge documents resync` repeats a link list or sitemap the way it was added. Requires a backend with link-list and sitemap support.
+
 ## 0.6.0
 
 Delete chatbots.

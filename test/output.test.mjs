@@ -65,13 +65,23 @@ test('chatbots delete maps to the destructive action and needs explicit flags', 
   assert.match(render('chatbots_delete', {data: {dryRun: true, action: 'chatbots_delete', name: 'Bot', sources: 2, conversations: 5}}, plain), /^Dry run: no changes made\.[\s\S]*sources\s+2[\s\S]*conversations\s+5/);
 });
 
+test('knowledge links and sitemap map to sources_add inputs', () => {
+  const links = parseCommand(['knowledge', 'links', 'add', 'https://docs.example.com/a', 'https://docs.example.com/b', '--chatbot', 'bot', '--yes', '--wait']);
+  assert.equal(links[1], 'sources_add');
+  assert.deepEqual(JSON.parse(links[3]), {urls: ['https://docs.example.com/a', 'https://docs.example.com/b'], chatbotId: 'bot', name: 'docs.example.com links'});
+  assert.deepEqual(links.slice(4), ['--yes', '--wait']);
+  const sitemap = parseCommand(['knowledge', 'sitemap', 'add', 'https://example.com/sitemap.xml', '--chatbot', 'bot', '--max-pages', '20', '--yes']);
+  assert.deepEqual(JSON.parse(sitemap[3]), {sitemapUrl: 'https://example.com/sitemap.xml', chatbotId: 'bot', maxPages: 20, name: 'example.com sitemap'});
+  assert.throws(() => parseCommand(['knowledge', 'links', 'add', '--chatbot', 'bot']), /Usage/);
+});
+
 test('leads list and --leads-only filter conversations to captured leads', () => {
   assert.deepEqual(JSON.parse(parseCommand(['leads', 'list', '--chatbot', 'bot'])[3]), {leadsOnly: true, chatbotId: 'bot'});
   assert.deepEqual(JSON.parse(parseCommand(['conversations', 'list', '--chatbot', 'bot', '--leads-only'])[3]), {chatbotId: 'bot', leadsOnly: true});
 });
 
 test('completion offers subcommands, then the command flags', () => {
-  assert.deepEqual(completions(['knowledge']), ['website', 'text', 'documents']);
+  assert.deepEqual(new Set(completions(['knowledge'])), new Set(['website', 'links', 'sitemap', 'text', 'documents']));
   assert.ok(completions([]).includes('leads'));
   const flags = completions(['knowledge', 'website', 'add', 'https://example.com']);
   for (const flag of ['--chatbot', '--max-pages', '--yes', '--dry-run', '--wait', '--json']) assert.ok(flags.includes(flag), flag);
