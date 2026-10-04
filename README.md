@@ -173,7 +173,7 @@ Every request identifies the client with an `X-CustomerGPT-Client: cli/<version>
 | --- | --- |
 | Account | `login`, `logout`, `whoami`, `usage`, `profiles list`, `profiles use`, `dashboard` |
 | Diagnostics | `doctor` |
-| Bots | `chatbots list`, `get`, `create`, `update` |
+| Bots | `chatbots list`, `get`, `create`, `update`, `delete` |
 | Training | `knowledge website add`, `knowledge text add` |
 | Sources | `knowledge documents list`, `resync`, `delete` |
 | Preview | `messages send` |
@@ -193,6 +193,8 @@ customergpt knowledge --help
 customergpt chatbots list
 customergpt knowledge text add "We open at 9am." --chatbot BOT_ID --name Hours --yes
 customergpt leads list --chatbot BOT_ID
+customergpt chatbots delete BOT_ID --dry-run   # shows what would be removed
+customergpt chatbots delete BOT_ID --yes       # permanent
 customergpt conversations update CONVERSATION_ID --chatbot BOT_ID --status closed --yes
 ```
 

@@ -56,6 +56,15 @@ test('typos suggest the closest command and option', () => {
   assert.throws(() => parseCommand(['chatbots', 'list', '--limt', '5']), {code: 'UNKNOWN_OPTION', message: /Did you mean --limit/});
 });
 
+test('chatbots delete maps to the destructive action and needs explicit flags', () => {
+  const args = parseCommand(['chatbots', 'delete', 'bot', '--dry-run']);
+  assert.equal(args[1], 'chatbots_delete');
+  assert.deepEqual(JSON.parse(args[3]), {chatbotId: 'bot'});
+  assert.deepEqual(args.slice(4), ['--dry-run']);
+  assert.throws(() => parseCommand(['chatbots', 'delete']), /Usage/);
+  assert.match(render('chatbots_delete', {data: {dryRun: true, action: 'chatbots_delete', name: 'Bot', sources: 2, conversations: 5}}, plain), /^Dry run: no changes made\.[\s\S]*sources\s+2[\s\S]*conversations\s+5/);
+});
+
 test('leads list and --leads-only filter conversations to captured leads', () => {
   assert.deepEqual(JSON.parse(parseCommand(['leads', 'list', '--chatbot', 'bot'])[3]), {leadsOnly: true, chatbotId: 'bot'});
   assert.deepEqual(JSON.parse(parseCommand(['conversations', 'list', '--chatbot', 'bot', '--leads-only'])[3]), {chatbotId: 'bot', leadsOnly: true});

@@ -2,6 +2,12 @@
 
 All notable changes to `@customergpt/cli` are documented here. This project follows [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Added
+
+- `chatbots delete <id>` permanently deletes a chatbot with its knowledge, conversations and leads. `--dry-run` shows the bot name and how many sources and conversations would be removed; `--yes` deletes. Deletion is refused while the bot is training. Requires a backend with the `chatbots_delete` action.
+
 ## 0.5.0
 
 Lighter install, built on the SDK.
