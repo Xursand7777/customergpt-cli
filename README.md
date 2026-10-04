@@ -205,6 +205,7 @@ Every request identifies the client with an `X-CustomerGPT-Client: cli/<version>
 | Bots | `chatbots list`, `get`, `create`, `update`, `delete` |
 | Training | `knowledge website add`, `knowledge links add`, `knowledge sitemap add`, `knowledge files add`, `knowledge text add`, `knowledge status`, `knowledge wait` |
 | Sources | `knowledge documents list`, `resync`, `delete` |
+| Custom responses | `knowledge responses list`, `add`, `update`, `delete` |
 | Preview | `messages send` |
 | Website installation | `installation snippet` |
 | Conversations | `conversations list` (`--mode`, `--leads-only`), `get`, `update` |

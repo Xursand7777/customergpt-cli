@@ -4,10 +4,11 @@ All notable changes to `@customergpt/cli` are documented here. This project foll
 
 ## Unreleased
 
-Agent skill and waiting for all training of a bot.
+Agent skill, waiting for all training of a bot, custom responses, conversation management, behaviour settings, team and API keys, request IDs.
 
 ### Added
 
+- `knowledge responses list|add|update|delete`: fixed answers to specific questions. An exact match (ignoring case and punctuation) is answered verbatim; similar wording gets the answer as top-priority context. Requires a backend with custom responses.
 - `knowledge wait --chatbot <id> [--timeout <seconds>]` blocks until nothing is training for the bot, with progress on stderr unless `--quiet`. It exits nonzero with `TRAINING_FAILED` and `training.failed` if training seen during the wait failed, and with `WAIT_TIMEOUT`, the sources still training and a resume command on timeout. `knowledge status --chatbot <id>` shows what is training now and failures from the last 24 hours. Both require a backend with the `training_status` action.
 - The library exports `waitForTraining(chatbotId, options)`, also available as `createClient().waitForTraining`.
 - `skills/customergpt-cli/SKILL.md` teaches AI agents to build a support bot with the CLI: install and `doctor`, anonymous onboarding or a logged-in account, create → train with `--wait` → test → install, JSON output and exit codes, safety rules and troubleshooting by error code. It ships in the npm package and is linked from the README.
