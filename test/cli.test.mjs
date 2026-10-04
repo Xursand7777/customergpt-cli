@@ -23,3 +23,27 @@ test('polling errors preserve the job handle and bound the request to the wait d
     throw new Error('Network unavailable');
   }}),error=>error.job.id==='job'&&error.job.token==='private');
 });
+test('agent-guide points to the packaged skill and its hosted copy', async () => {
+  const {execFile} = await import('node:child_process');
+  const {fileURLToPath} = await import('node:url');
+  const {readFile} = await import('node:fs/promises');
+  const bin = new URL('../bin/customergpt.mjs', import.meta.url);
+  const stdout = await new Promise((resolve, reject) => execFile(process.execPath, [fileURLToPath(bin), 'agent-guide'], (error, out) => error ? reject(error) : resolve(out)));
+  const guide = JSON.parse(stdout);
+  assert.equal(guide.skill.url, 'https://api.customergpt.ai/agents/customergpt-cli-skill.md');
+  const skill = await readFile(guide.skill.file, 'utf8');
+  assert.match(skill, /^---\nname: customergpt-cli\ndescription: .+\n---\n/);
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.ok(pkg.files.includes('skills'));
+});
+test('the skill only names commands the CLI has', async () => {
+  const {readFile} = await import('node:fs/promises');
+  const {commands} = await import('../lib/commands.mjs');
+  const skill = await readFile(new URL('../skills/customergpt-cli/SKILL.md', import.meta.url), 'utf8');
+  const extra = ['login','logout','doctor','whoami','mcp','agent-guide','actions','call','dashboard','completion'];
+  const used = [...skill.matchAll(/customergpt ([a-z][a-z-]*(?: [a-z]+){0,2})/g)].map(m => m[1]);
+  for (const words of used) {
+    const known = Object.keys(commands).some(name => (words+' ').startsWith(name+' ')) || extra.includes(words.split(' ')[0]);
+    assert.ok(known, 'Unknown command in SKILL.md: customergpt '+words);
+  }
+});

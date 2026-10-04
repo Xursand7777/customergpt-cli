@@ -2,6 +2,15 @@
 
 All notable changes to `@customergpt/cli` are documented here. This project follows [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+Agent skill.
+
+### Added
+
+- `skills/customergpt-cli/SKILL.md` teaches AI agents to build a support bot with the CLI: install and `doctor`, anonymous onboarding or a logged-in account, create → train with `--wait` → test → install, JSON output and exit codes, safety rules and troubleshooting by error code. It ships in the npm package and is linked from the README.
+- `agent-guide` returns `skill.url` (https://api.customergpt.ai/agents/customergpt-cli-skill.md, served by a backend with the skill route) and `skill.file`, the path of the packaged copy.
+
 ## 0.8.0
 
 Train from documents.

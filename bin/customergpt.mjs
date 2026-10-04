@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readFile } from 'node:fs/promises';
 
 import {connection, readConfig, saveConfig, DEFAULT_BASE, normalizeBase, profiles} from '../lib/config.mjs';
@@ -13,6 +13,9 @@ import {request, waitForJob} from '../lib/index.mjs';
 import {attachFile} from '../lib/files.mjs';
 export {request, waitForJob} from '../lib/index.mjs';
 const DASHBOARD = 'https://dashboard.customergpt.ai';
+// The same SKILL.md ships in this package and is served by the API for agents without it.
+const SKILL_URL = 'https://api.customergpt.ai/agents/customergpt-cli-skill.md';
+const SKILL_FILE = fileURLToPath(new URL('../skills/customergpt-cli/SKILL.md', import.meta.url));
 
 function mcp(options) {
   const mcpOptions = {...options, mode:'mcp'};
@@ -99,7 +102,7 @@ export async function main(args) {
   }
   if (args[0] === 'logout') { await logout(); print({ok:true,data:{message:'Saved session removed. Environment API keys are not changed.'}},'logout'); return; }
   if (args[0] === 'agent-guide') {
-    console.log(JSON.stringify({workflow:['customergpt login','customergpt chatbots create "Support Bot" --url https://example.com --yes','customergpt knowledge website add https://example.com --chatbot <id> --yes --wait','customergpt messages send "What do you offer?" --chatbot <id> --yes','customergpt installation snippet --chatbot <id>'],anonymous:'customergpt onboarding start https://example.com --yes --wait',commands,notes:['Use your own CustomerGPT account.','Return the preview URL to the human to claim anonymous drafts.','Never expose tokens. Use --dry-run before changes.']})); return;
+    console.log(JSON.stringify({workflow:['customergpt login','customergpt chatbots create "Support Bot" --url https://example.com --yes','customergpt knowledge website add https://example.com --chatbot <id> --yes --wait','customergpt messages send "What do you offer?" --chatbot <id> --yes','customergpt installation snippet --chatbot <id>'],anonymous:'customergpt onboarding start https://example.com --yes --wait',skill:{url:SKILL_URL,file:SKILL_FILE},commands,notes:['Read the skill before changing anything.','Use your own CustomerGPT account.','Return the preview URL to the human to claim anonymous drafts.','Never expose tokens. Use --dry-run before changes.']})); return;
   }
   if (args[0] === 'mcp') return mcp(options);
   if (!['call','actions'].includes(args[0])) args = parseCommand(args);

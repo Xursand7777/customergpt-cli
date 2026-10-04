@@ -11,7 +11,7 @@ Use your own CustomerGPT account from the terminal, CI scripts or MCP-compatible
 
 - **People** get readable tables, colors, typo suggestions and shell completion.
 - **Scripts** get a stable JSON envelope whenever output is piped or `--json` is passed, plus exit codes and `--dry-run`.
-- **AI agents** get `agent-guide`, an MCP server and `--wait`, so they never have to poll training.
+- **AI agents** get an [agent skill](skills/customergpt-cli/SKILL.md), `agent-guide`, an MCP server and `--wait`, so they never have to poll training.
 
 ## Contents
 
@@ -24,6 +24,7 @@ Use your own CustomerGPT account from the terminal, CI scripts or MCP-compatible
 - [Commands](#commands)
 - [Automation and JSON](#automation-and-json)
 - [Shell completion](#shell-completion)
+- [Agent skill](#agent-skill)
 - [MCP](#mcp)
 - [JavaScript and TypeScript](#javascript-and-typescript)
 - [Configuration](#configuration)
@@ -251,7 +252,7 @@ Example error:
 
 Keep stdout for results and stderr for errors/progress. Training progress includes a resumable job handle; anonymous handles contain secrets, so avoid publishing these logs. An interrupted wait does not cancel server-side training. Inspect it with `customergpt jobs get JOB_ID` (add `--token` for an anonymous draft).
 
-For AI assistants, `customergpt agent-guide` prints the workflow and command map. Authenticate with your own account, inspect the actions, and confirm changes before executing them.
+For AI assistants, `customergpt agent-guide` prints the workflow, the command map and the [agent skill](#agent-skill) location. Authenticate with your own account, inspect the actions, and confirm changes before executing them.
 
 ## Shell completion
 
@@ -264,6 +265,14 @@ source <(customergpt completion bash)
 ```
 
 Add the line to `~/.zshrc` or `~/.bashrc` to keep it. Completion suggests commands, subcommands and each command's flags.
+
+## Agent skill
+
+[`skills/customergpt-cli/SKILL.md`](skills/customergpt-cli/SKILL.md) teaches AI agents (Claude Code, Codex, Cursor and others) to build a support bot with this CLI: choosing anonymous onboarding or an account, the create → train → test → install flow, JSON output and exit codes, safety rules and troubleshooting by error code.
+
+- It ships in the npm package; `customergpt agent-guide` prints its local path in `skill.file`.
+- It is served at **https://api.customergpt.ai/agents/customergpt-cli-skill.md** for agents that do not have the package.
+- To install it as a Claude Code skill, copy the folder into `~/.claude/skills/` (or `.claude/skills/` in a project).
 
 ## MCP
 
@@ -354,7 +363,7 @@ npm pack
 customergpt login --api-base http://localhost:3000
 ```
 
-Packaging runs tests and includes the executable, library, declarations, README and LICENSE. Installing the CLI does not start a local backend. New agent actions require the matching backend release.
+Packaging runs tests and includes the executable, library, declarations, agent skill, README and LICENSE. The backend serves a pinned copy of `skills/customergpt-cli/SKILL.md`; after changing it, sync the backend copy (see the backend's `docs/agents.md`). Installing the CLI does not start a local backend. New agent actions require the matching backend release.
 
 ## Support
 
