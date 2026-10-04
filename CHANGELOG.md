@@ -2,12 +2,13 @@
 
 All notable changes to `@customergpt/cli` are documented here. This project follows [Semantic Versioning](https://semver.org).
 
-## Unreleased
+## 0.9.0
 
 Agent skill, waiting for all training of a bot, custom responses, conversation management, behaviour settings, team and API keys, request IDs.
 
 ### Added
 
+- Uses `@customergpt/sdk` 0.5; only well-formed request IDs are shown.
 - `knowledge responses list|add|update|delete`: fixed answers to specific questions. An exact match (ignoring case and punctuation) is answered verbatim; similar wording gets the answer as top-priority context. Requires a backend with custom responses.
 - `messages reply <conversation-id> <text>` sends a human reply to the visitor (the conversation must be in human mode); `conversations tag <id> --add <tag> --remove <tag>` adds and removes tags; `conversations bulk-update <id…> [--status] [--mode] [--add] [--remove]` updates up to 100 conversations atomically, with `--dry-run` showing what matches. Requires a backend with conversation management.
 - `chatbots update` sets behaviour: `--welcome`, `--color`, `--starter` (repeat) / `--clear-starters`, `--calendar-link` / `--clear-calendar-link`, `--instructions` / `--instructions-file`, `--sales` / `--no-sales`, `--booking` / `--no-booking`, `--handoff-keyword` (repeat) / `--clear-handoff-keywords`, `--checkout-url`, `--sales-config-file <json>` for any other salesConfig field, and `--reset-behaviour`. Contradictory flags fail with `CONFLICTING_OPTIONS`; `--dry-run` shows the resulting settings. Requires a backend with behaviour settings.
