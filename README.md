@@ -224,6 +224,7 @@ customergpt knowledge --help
 customergpt chatbots list
 customergpt knowledge text add "We open at 9am." --chatbot BOT_ID --name Hours --yes
 customergpt leads list --chatbot BOT_ID
+customergpt chatbots update BOT_ID --starter "Pricing?" --starter "Book a demo" --instructions-file ./tone.md --sales --dry-run
 customergpt chatbots delete BOT_ID --dry-run   # shows what would be removed
 customergpt chatbots delete BOT_ID --yes       # permanent
 customergpt conversations update CONVERSATION_ID --chatbot BOT_ID --status closed --yes

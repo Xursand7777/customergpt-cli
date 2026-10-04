@@ -10,7 +10,7 @@ import {version} from '../lib/version.mjs';
 import {parseCommand, help, commands, completions, completionScript} from '../lib/commands.mjs';
 import {render, renderError, palette, useColor} from '../lib/output.mjs';
 import {request, waitForJob, waitForTraining} from '../lib/index.mjs';
-import {attachFile} from '../lib/files.mjs';
+import {attachFile, readSettingFiles} from '../lib/files.mjs';
 export {request, waitForJob, waitForTraining} from '../lib/index.mjs';
 const DASHBOARD = 'https://dashboard.customergpt.ai';
 // The same SKILL.md ships in this package and is served by the API for agents without it.
@@ -128,6 +128,7 @@ export async function main(args) {
   if (flags.includes('--yes')) input.confirm = true;
   if (flags.includes('--dry-run')) { input.dryRun = true; input.confirm = false; }
   if (action === 'sources_add') input = await attachFile(input);
+  if (action === 'chatbots_update') input = await readSettingFiles(input);
   if (waitAll) {
     if (action !== 'training_status' || !input.chatbotId) throw new Error('--wait-all works only with training_status and a chatbotId');
     let last;
