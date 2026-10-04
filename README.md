@@ -387,7 +387,7 @@ Packaging runs tests and includes the executable, library, declarations, agent s
 - [Report a CLI issue](https://github.com/Xursand7777/customergpt-cli/issues)
 - Email: [support@customergpt.ai](mailto:support@customergpt.ai)
 
-Include your CLI and Node.js versions, command and redacted error. Never include API keys, session files or private preview tokens.
+Include your CLI and Node.js versions, command, redacted error and the request ID from the error (`request …` in the terminal, `meta.requestId` in JSON). Never include API keys, session files or private preview tokens.
 
 ## License
 

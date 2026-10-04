@@ -29,7 +29,7 @@ function mcp(options) {
     },
     callTool: async (name, args) => {
       try { return {content:[{type:'text',text:JSON.stringify(await request(name,args,mcpOptions))}]}; }
-      catch(error) { return {isError:true,content:[{type:'text',text:JSON.stringify({ok:false,error:{code:error.code || 'REQUEST_FAILED',message:error.message}})}]}; }
+      catch(error) { return {isError:true,content:[{type:'text',text:JSON.stringify({ok:false,error:{code:error.code || 'REQUEST_FAILED',message:error.message},...(error.requestId ? {meta:{requestId:error.requestId}} : {})})}]}; }
     },
   });
 }
@@ -164,7 +164,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   main(process.argv.slice(2)).catch(error => {
     const argv = process.argv.slice(2);
     if (humanOutput(argv, argv[0] !== 'call' && argv.includes('--json'), process.stderr)) console.error(renderError(error, palette(useColor(process.stderr))));
-    else console.error(JSON.stringify({ok:false,error:{code:error.code || 'CLI_ERROR',message:error.message,...(error.hint ? {hint:error.hint} : {})}, ...(error.job ? {job:error.job} : {}), ...(error.training ? {training:error.training} : {})}));
+    else console.error(JSON.stringify({ok:false,error:{code:error.code || 'CLI_ERROR',message:error.message,...(error.hint ? {hint:error.hint} : {})}, ...(error.job ? {job:error.job} : {}), ...(error.training ? {training:error.training} : {}), ...(error.requestId ? {meta:{requestId:error.requestId}} : {})}));
     process.exitCode = 1;
   });
 }
