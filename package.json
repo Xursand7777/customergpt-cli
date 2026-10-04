@@ -1,6 +1,6 @@
 {
   "name": "@customergpt/cli",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Official CustomerGPT CLI — create, train, test and install AI support bots from your terminal and AI agents.",
   "type": "module",
   "bin": {
