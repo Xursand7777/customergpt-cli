@@ -80,6 +80,58 @@ test('leads list and --leads-only filter conversations to captured leads', () =>
   assert.deepEqual(JSON.parse(parseCommand(['conversations', 'list', '--chatbot', 'bot', '--leads-only'])[3]), {chatbotId: 'bot', leadsOnly: true});
 });
 
+test('messages reply, conversations tag and bulk-update map to their actions', () => {
+  const reply = parseCommand(['messages', 'reply', 'c1', 'We will call you today', '--chatbot', 'bot', '--yes']);
+  assert.equal(reply[1], 'messages_reply');
+  assert.deepEqual(JSON.parse(reply[3]), {conversationId: 'c1', text: 'We will call you today', chatbotId: 'bot'});
+  assert.deepEqual(reply.slice(4), ['--yes']);
+  assert.throws(() => parseCommand(['messages', 'reply', 'c1', '--chatbot', 'bot']), /Usage/);
+  const tag = parseCommand(['conversations', 'tag', 'c1', '--chatbot', 'bot', '--add', 'vip', '--add', 'follow-up,vip', '--remove', 'cold']);
+  assert.equal(tag[1], 'conversations_tag');
+  assert.deepEqual(JSON.parse(tag[3]), {conversationId: 'c1', chatbotId: 'bot', addTags: ['vip', 'follow-up'], removeTags: ['cold']});
+  assert.throws(() => parseCommand(['conversations', 'tag', 'c1', '--add']), /--add requires a value/);
+  const bulk = parseCommand(['conversations', 'bulk-update', 'c1', 'c2', '--chatbot', 'bot', '--status', 'closed', '--add', 'done', '--dry-run']);
+  assert.equal(bulk[1], 'conversations_bulk_update');
+  assert.deepEqual(JSON.parse(bulk[3]), {conversationIds: ['c1', 'c2'], chatbotId: 'bot', status: 'closed', addTags: ['done']});
+  assert.deepEqual(bulk.slice(4), ['--dry-run']);
+  assert.throws(() => parseCommand(['conversations', 'bulk-update', '--chatbot', 'bot']), /Usage/);
+  assert.ok(completions(['conversations', 'bulk-update']).includes('--remove'));
+  assert.ok(completions(['conversations']).includes('bulk-update'));
+});
+
+test('replies, tags and bulk updates render for people', () => {
+  assert.equal(render('messages_reply', {data: {id: 'm1', sender: 'agent', text: 'Hello\nthere', time: '10:00'}}, plain), '✔ Reply sent · 10:00\n  Hello\n  there');
+  assert.equal(render('conversations_tag', {data: {conversationId: 'c1', tags: ['vip', 'done']}}, plain), '✔ Tags: vip, done');
+  assert.equal(render('conversations_tag', {data: {conversationId: 'c1', tags: null}}, plain), '✔ Tags: none');
+  const preview = render('conversations_bulk_update', {data: {dryRun: true, action: 'conversations_bulk_update', matched: 1, conversationIds: ['c1'], notFound: ['c9']}}, plain);
+  assert.match(preview, /^Dry run: no changes made\.\n1 conversation\(s\) would be updated:\n {2}c1\n1 not found for this bot[^\n]*\n {2}c9$/);
+  const done = render('conversations_bulk_update', {data: {updated: 2, conversations: [{id: 'c1', status: 'closed', mode: 'ai', tags: ['done']}, {id: 'c2', status: 'closed', mode: 'ai', tags: null}]}}, plain);
+  assert.match(done, /^✔ Updated 2 conversation\(s\)\n\nid\s+status\s+mode\s+tags\nc1\s+closed\s+ai\s+done\nc2\s+closed\s+ai$/);
+});
+
+test('bulk-update --dry-run sends a dry run without confirmation', async () => {
+  let body;
+  const server = createServer((req, res) => {
+    let raw = '';
+    req.on('data', chunk => raw += chunk);
+    req.on('end', () => {
+      body = {path: req.url, input: JSON.parse(raw)};
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ok: true, data: {dryRun: true, action: 'conversations_bulk_update', matched: 2, conversationIds: ['c1', 'c2'], notFound: []}}));
+    });
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const env = {...process.env, CUSTOMERGPT_API_URL: 'http://127.0.0.1:' + server.address().port, CUSTOMERGPT_API_KEY: 'k', CUSTOMERGPT_OUTPUT: 'json'};
+    const stdout = await new Promise((resolve, reject) => execFile(process.execPath, [bin, 'conversations', 'bulk-update', 'c1', 'c2', '--chatbot', 'bot', '--mode', 'ai', '--yes', '--dry-run'], {env}, (error, out) => error ? reject(error) : resolve(out)));
+    assert.equal(JSON.parse(stdout).data.matched, 2);
+    assert.match(body.path, /\/conversations_bulk_update$/);
+    assert.equal(body.input.dryRun, true);
+    assert.equal(body.input.confirm, false);
+    assert.deepEqual(body.input.conversationIds, ['c1', 'c2']);
+  } finally { await new Promise(resolve => server.close(resolve)); }
+});
+
 test('completion offers subcommands, then the command flags', () => {
   assert.deepEqual(new Set(completions(['knowledge'])), new Set(['website', 'links', 'sitemap', 'files', 'text', 'documents', 'responses', 'status', 'wait']));
   for (const flag of ['--chatbot', '--timeout', '--quiet']) assert.ok(completions(['knowledge', 'wait']).includes(flag), flag);

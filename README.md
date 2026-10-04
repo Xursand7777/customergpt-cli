@@ -208,7 +208,8 @@ Every request identifies the client with an `X-CustomerGPT-Client: cli/<version>
 | Custom responses | `knowledge responses list`, `add`, `update`, `delete` |
 | Preview | `messages send` |
 | Website installation | `installation snippet` |
-| Conversations | `conversations list` (`--mode`, `--leads-only`), `get`, `update` |
+| Conversations | `conversations list` (`--mode`, `--leads-only`), `get`, `update`, `tag`, `bulk-update` |
+| Replies | `messages reply` (human mode only) |
 | Leads | `leads list` |
 | Analytics | `analytics get` |
 | Anonymous onboarding | `onboarding start`, `status`, `preview`, `claim` |
