@@ -5,7 +5,8 @@ import { readFile } from 'node:fs/promises';
 import {connection, readConfig, saveConfig, DEFAULT_BASE, normalizeBase, profiles} from '../lib/config.mjs';
 import {doctor} from '../lib/diagnostics.mjs';
 import {browserLogin, logout} from '../lib/login.mjs';
-import {parseCommand, help, commands} from '../lib/commands.mjs';
+import {parseCommand, help, commands, completions, completionScript} from '../lib/commands.mjs';
+import {render, renderError, palette, useColor} from '../lib/output.mjs';
 import {request, waitForJob} from '../lib/index.mjs';
 export {request, waitForJob} from '../lib/index.mjs';
 const {version} = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
@@ -57,14 +58,22 @@ export async function main(args) {
     args = [...args.slice(0,baseIndex),...args.slice(baseIndex+2)];
   }
   if (args.length === 1 && ['--version', '-v'].includes(args[0])) { console.log(version); return; }
+  if (args[0] === '__complete') { console.log(completions(args.slice(1)).join('\n')); return; }
+  // For "call", --json carries input; everywhere else it selects JSON output.
+  const jsonFlag = args[0] !== 'call' && args.includes('--json');
+  if (jsonFlag) args = args.filter(a => a !== '--json');
+  const human = humanOutput(args, jsonFlag);
+  const c = palette(useColor());
+  const print = (result, action) => console.log(human ? render(action, result, c) : JSON.stringify(result));
   if (!args.length || args.includes('--help') || args.includes('-h') || args[0] === 'help') {
     const prefix = args.filter(a => !['--help','-h','help'].includes(a)).join(' ');
     console.log(help(prefix)); return;
   }
-  if (args[0] === 'doctor') { const result=await doctor(version,options); console.log(JSON.stringify(result)); if(!result.ok) process.exitCode=1; return; }
-  if (args[0] === 'profiles') { if(args.length>3) throw new Error('Too many profile arguments'); console.log(JSON.stringify({ok:true,data:await profiles(args[1],args[2])})); return; }
+  if (args[0] === 'completion') { process.stdout.write(completionScript(args[1])); return; }
+  if (args[0] === 'doctor') { const result=await doctor(version,options); print(result,'doctor'); if(!result.ok) process.exitCode=1; return; }
+  if (args[0] === 'profiles') { if(args.length>3) throw new Error('Too many profile arguments'); print({ok:true,data:await profiles(args[1],args[2])},'profiles'); return; }
   if (args[0] === 'login') {
-    if (args.slice(1).some(a => !['--no-browser','--token-stdin'].includes(a))) throw new Error('Use login [--no-browser | --token-stdin] [--api-base <origin>]');
+    if (args.slice(1).some(a => !['--no-browser','--token-stdin','--read-only'].includes(a))) throw new Error('Use login [--no-browser | --token-stdin] [--read-only] [--api-base <origin>]');
     const saved = await readConfig();
     const base = normalizeBase(process.env.CUSTOMERGPT_API_URL || saved.base || DEFAULT_BASE);
     if (args.includes('--token-stdin')) {
@@ -73,10 +82,10 @@ export async function main(args) {
       key = key.trim(); if (!key) throw new Error('API key is empty');
       await request('account_usage', {}, {...options,base, key});
       await saveConfig({base,key});
-    } else await browserLogin(base,{noBrowser:args.includes('--no-browser'),timeoutMs:options.timeoutMs});
-    console.log(JSON.stringify({ok:true,data:{message:'Logged in. Run customergpt chatbots list.',base}})); return;
+    } else await browserLogin(base,{noBrowser:args.includes('--no-browser'),timeoutMs:options.timeoutMs,...(args.includes('--read-only') ? {scope:'agents:read'} : {})});
+    print({ok:true,data:{message:'Logged in to '+base+'. Run customergpt chatbots list.',base}},'login'); return;
   }
-  if (args[0] === 'logout') { await logout(); console.log(JSON.stringify({ok:true,data:{message:'Saved session removed. Environment API keys are not changed.'}})); return; }
+  if (args[0] === 'logout') { await logout(); print({ok:true,data:{message:'Saved session removed. Environment API keys are not changed.'}},'logout'); return; }
   if (args[0] === 'agent-guide') {
     console.log(JSON.stringify({workflow:['customergpt login','customergpt chatbots create "Support Bot" --url https://example.com --yes','customergpt knowledge website add https://example.com --chatbot <id> --yes --wait','customergpt messages send "What do you offer?" --chatbot <id> --yes','customergpt installation snippet --chatbot <id>'],anonymous:'customergpt onboarding start https://example.com --yes --wait',commands,notes:['Use your own CustomerGPT account.','Return the preview URL to the human to claim anonymous drafts.','Never expose tokens. Use --dry-run before changes.']})); return;
   }
@@ -105,15 +114,25 @@ export async function main(args) {
   const result = await request(action,input,options);
   if (wait && result.data?.id && ['pending','running'].includes(result.data.status)) {
     // Report the handle immediately on stderr so a interrupted process can be resumed.
-    if(!quiet) console.error(JSON.stringify({event:'job_started',data:result.data}));
+    if(!quiet) console.error(human ? c.dim('Training started (job '+result.data.id+'). Waiting for it to finish…') : JSON.stringify({event:'job_started',data:result.data}));
     result.data = await waitForJob(result.data,options);
   }
-  console.log(JSON.stringify(result));
+  print(result,action);
+}
+
+/** People at a terminal get tables; pipes, CI, --json and machine-oriented commands get JSON. */
+export function humanOutput(args, jsonFlag, stdout = process.stdout, env = process.env) {
+  if (jsonFlag || env.CUSTOMERGPT_OUTPUT === 'json') return false;
+  if (env.CUSTOMERGPT_OUTPUT === 'human') return !['call','actions','agent-guide','mcp'].includes(args[0]);
+  if (['call','actions','agent-guide','mcp'].includes(args[0])) return false;
+  return Boolean(stdout.isTTY);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main(process.argv.slice(2)).catch(error => {
-    console.error(JSON.stringify({ok:false,error:{code:error.code || 'CLI_ERROR',message:error.message,...(error.hint ? {hint:error.hint} : {})}, ...(error.job ? {job:error.job} : {})}));
+    const argv = process.argv.slice(2);
+    if (humanOutput(argv, argv[0] !== 'call' && argv.includes('--json'), process.stderr)) console.error(renderError(error, palette(useColor(process.stderr))));
+    else console.error(JSON.stringify({ok:false,error:{code:error.code || 'CLI_ERROR',message:error.message,...(error.hint ? {hint:error.hint} : {})}, ...(error.job ? {job:error.job} : {})}));
     process.exitCode = 1;
   });
 }

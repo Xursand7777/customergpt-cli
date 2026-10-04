@@ -7,7 +7,11 @@
 
 The official command-line interface for **[CustomerGPT](https://customergpt.ai)**. Create a support bot, train it on your website, test its answers and get the code to install it on your site.
 
-Use your own CustomerGPT account from the terminal, CI scripts or MCP-compatible AI assistants. Commands return JSON, changes require explicit confirmation, and `--wait` follows training until it finishes.
+Use your own CustomerGPT account from the terminal, CI scripts or MCP-compatible AI assistants:
+
+- **People** get readable tables, colors, typo suggestions and shell completion.
+- **Scripts** get a stable JSON envelope whenever output is piped or `--json` is passed, plus exit codes and `--dry-run`.
+- **AI agents** get `agent-guide`, an MCP server and `--wait`, so they never have to poll training.
 
 ## Contents
 
@@ -19,6 +23,7 @@ Use your own CustomerGPT account from the terminal, CI scripts or MCP-compatible
 - [Diagnostics](#diagnostics)
 - [Commands](#commands)
 - [Automation and JSON](#automation-and-json)
+- [Shell completion](#shell-completion)
 - [MCP](#mcp)
 - [JavaScript and TypeScript](#javascript-and-typescript)
 - [Configuration](#configuration)
@@ -55,7 +60,7 @@ Your browser opens CustomerGPT. Sign in and approve the connection, then return 
 customergpt chatbots create "Support Bot" --url https://example.com --yes
 ```
 
-Example response, shortened for readability:
+In a terminal the CLI prints a summary. With `--json` (or when piped) you get the full response, shortened here:
 
 ```json
 {
@@ -117,11 +122,12 @@ customergpt onboarding preview JOB_ID --token TEMPORARY_TOKEN --message "What do
 ```bash
 customergpt login
 customergpt login --no-browser
+customergpt login --read-only
 customergpt whoami
 customergpt logout
 ```
 
-Browser login uses OAuth with PKCE and a local callback. `--no-browser` prints the URL instead of opening it; open it on the same computer as the CLI. `whoami` validates access and returns usage, not your email or profile details.
+Browser login uses OAuth with PKCE and a local callback. `--no-browser` prints the URL instead of opening it; open it on the same computer as the CLI. `--read-only` requests only the `agents:read` scope, so the session can list and read but never change anything. `whoami` validates access and returns usage, not your email or profile details.
 
 Your session is saved in `~/.config/customergpt/config.json`; access tokens refresh automatically. Protect this file and do not commit it. POSIX systems use owner-only file permissions.
 
@@ -170,11 +176,13 @@ customergpt knowledge website add https://example.com --chatbot BOT_ID --yes --w
 | Sources | `knowledge documents list`, `resync`, `delete` |
 | Preview | `messages send` |
 | Website installation | `installation snippet` |
-| Conversations | `conversations list`, `get`, `update` |
+| Conversations | `conversations list` (`--mode`, `--leads-only`), `get`, `update` |
+| Leads | `leads list` |
 | Analytics | `analytics get` |
 | Anonymous onboarding | `onboarding start`, `status`, `preview`, `claim` |
 | Jobs | `jobs get` |
 | AI assistants | `mcp`, `agent-guide` |
+| Shell | `completion bash`, `completion zsh` |
 | Advanced API | `actions`, `call` |
 
 ```bash
@@ -182,14 +190,17 @@ customergpt --help
 customergpt knowledge --help
 customergpt chatbots list
 customergpt knowledge text add "We open at 9am." --chatbot BOT_ID --name Hours --yes
+customergpt leads list --chatbot BOT_ID
 customergpt conversations update CONVERSATION_ID --chatbot BOT_ID --status closed --yes
 ```
 
-Use `customergpt actions` for server-side input schemas. Named commands expose common options; `call` supports all fields in the action schema. Billing, team management and shell completion are not currently supported by this CLI.
+Typos get a suggestion: `customergpt chatbts list` answers *Did you mean "customergpt chatbots list"?*, and `--limt` suggests `--limit`.
+
+Use `customergpt actions` for server-side input schemas. Named commands expose common options; `call` supports all fields in the action schema. Billing and team management are not currently supported by this CLI.
 
 ## Automation and JSON
 
-Output is JSON by default. Named commands accept `--json` as an output flag. With the advanced `call` command, `--json` instead takes an input object:
+In an interactive terminal, named commands print tables and summaries. Output is JSON when stdout is not a terminal (pipes, CI, AI agents), when you pass `--json`, or when `CUSTOMERGPT_OUTPUT=json` is set. `call`, `actions` and `agent-guide` always print JSON. With `call`, `--json` instead takes an input object:
 
 ```bash
 customergpt chatbots list --json
@@ -208,7 +219,7 @@ Replace `BOT_ID` with the UUID returned by bot creation.
 - `--yes` confirms a change or a quota-consuming preview.
 - `--dry-run` validates inputs and ownership without executing. It does not reserve quota or guarantee provider availability.
 - `--wait` waits up to 15 minutes for training and fails if the job fails.
-- Exit code **0** means success; failures use a nonzero exit code and write JSON to stderr.
+- Exit code **0** means success; failures use a nonzero exit code and write the error to stderr: JSON in JSON mode, a message with a `→` next step in a terminal.
 
 Example error:
 
@@ -219,6 +230,18 @@ Example error:
 Keep stdout for results and stderr for errors/progress. Training progress includes a resumable job handle; anonymous handles contain secrets, so avoid publishing these logs. An interrupted wait does not cancel server-side training. Inspect it with `customergpt jobs get JOB_ID` (add `--token` for an anonymous draft).
 
 For AI assistants, `customergpt agent-guide` prints the workflow and command map. Authenticate with your own account, inspect the actions, and confirm changes before executing them.
+
+## Shell completion
+
+```bash
+# zsh
+source <(customergpt completion zsh)
+
+# bash
+source <(customergpt completion bash)
+```
+
+Add the line to `~/.zshrc` or `~/.bashrc` to keep it. Completion suggests commands, subcommands and each command's flags.
 
 ## MCP
 
@@ -265,6 +288,8 @@ ESM with TypeScript declarations. Public exports: `createClient`, `request`, `wa
 | `CUSTOMERGPT_API_KEY` | Credential override for scripts and CI |
 | `CUSTOMERGPT_PROFILE` | Select a saved profile; overridden by `--profile` |
 | `CUSTOMERGPT_CONFIG_FILE` | Override the user config location |
+| `CUSTOMERGPT_OUTPUT` | `json` forces JSON output; `human` forces tables even when piped |
+| `NO_COLOR` / `FORCE_COLOR` | Disable or force colored output |
 
 `--api-base` overrides the server for a command. Otherwise the environment takes precedence over the saved server. Saved credentials are never sent to a different origin selected by an override. Public servers require HTTPS; loopback development servers can use HTTP.
 
