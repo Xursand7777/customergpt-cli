@@ -69,6 +69,8 @@ Pick the knowledge command that matches what the user has:
 
 Each one takes `--chatbot BOT_ID --yes --wait`. Training reads at most 50,000 characters per job and does not run JavaScript. Report any `warnings` in the result. List and maintain sources with `knowledge documents list|resync|delete`.
 
+To train several sources, add each one without `--wait`, then run `customergpt knowledge wait --chatbot BOT_ID --json` once. It waits until nothing trains for the bot and exits nonzero with `TRAINING_FAILED` listing `training.failed` if any of them failed. `customergpt knowledge status --chatbot BOT_ID --json` shows what is training right now.
+
 ```bash
 # 3. Test one answer (uses message quota; no real visitor is contacted).
 customergpt messages send "What services do you offer?" --chatbot BOT_ID --yes --json
@@ -111,8 +113,8 @@ Later: `conversations list --chatbot BOT_ID` (`--mode human`, `--leads-only`), `
 | `HTTP_429` | Rate limit | Wait a minute, then retry once |
 | `HTTP_503` | Anonymous onboarding disabled or at its daily limit, or AI unavailable | Use a logged-in account, or try later |
 | `HTTP_400` | Unreadable site, no content, or a source still training | Read `message`; try `links add`, `files add` or `text add` instead |
-| `WAIT_TIMEOUT` | `--wait` gave up; training continues on the server | `customergpt jobs get JOB_ID` |
-| `TRAINING_FAILED` | The job failed; `job.error` says why | Fix the source and add it again |
+| `WAIT_TIMEOUT` | `--wait` or `knowledge wait` gave up; training continues on the server | `customergpt jobs get JOB_ID`, or run `knowledge wait` again |
+| `TRAINING_FAILED` | The job failed; `job.error` (or each `training.failed[].error`) says why | Fix the source and add it again |
 | `NETWORK_ERROR`, `TIMEOUT` | Server unreachable or slow | Check the connection and `CUSTOMERGPT_API_URL`; raise `--timeout` |
 
 If something still fails, run the command with `--debug` (it never logs tokens or bodies) and `customergpt doctor`, and report the redacted error to the user.

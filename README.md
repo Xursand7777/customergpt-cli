@@ -103,6 +103,16 @@ customergpt knowledge files add ./handbook.pdf --chatbot BOT_ID --yes --wait
 
 The server extracts the text; scanned PDFs need OCR first. `knowledge documents resync` repeats a link list or sitemap the way it was added. Compressed `sitemap.xml.gz` files are not supported.
 
+Start several sources without `--wait`, then wait for all of them at once:
+
+```bash
+customergpt knowledge website add https://example.com --chatbot BOT_ID --yes
+customergpt knowledge files add ./handbook.pdf --chatbot BOT_ID --yes
+customergpt knowledge wait --chatbot BOT_ID --timeout 900
+```
+
+`knowledge wait` blocks until nothing is training for the bot (agent jobs and sources syncing from the dashboard or integrations alike), printing progress on stderr unless `--quiet`. It exits nonzero with `TRAINING_FAILED` and lists the failed sources if anything that trained during the wait failed; failures from before the wait do not count. On timeout it exits with `WAIT_TIMEOUT`, the sources still training and the command to resume. `knowledge status --chatbot BOT_ID` shows the same state once, with failures from the last 24 hours. Both need a backend with the `training_status` action.
+
 ### 4. Test an answer
 
 ```bash
@@ -193,7 +203,7 @@ Every request identifies the client with an `X-CustomerGPT-Client: cli/<version>
 | Account | `login`, `logout`, `whoami`, `usage`, `profiles list`, `profiles use`, `dashboard` |
 | Diagnostics | `doctor` |
 | Bots | `chatbots list`, `get`, `create`, `update`, `delete` |
-| Training | `knowledge website add`, `knowledge links add`, `knowledge sitemap add`, `knowledge files add`, `knowledge text add` |
+| Training | `knowledge website add`, `knowledge links add`, `knowledge sitemap add`, `knowledge files add`, `knowledge text add`, `knowledge status`, `knowledge wait` |
 | Sources | `knowledge documents list`, `resync`, `delete` |
 | Preview | `messages send` |
 | Website installation | `installation snippet` |
@@ -241,7 +251,7 @@ Replace `BOT_ID` with the UUID returned by bot creation.
 
 - `--yes` confirms a change or a quota-consuming preview.
 - `--dry-run` validates inputs and ownership without executing. It does not reserve quota or guarantee provider availability.
-- `--wait` waits up to 15 minutes for training and fails if the job fails.
+- `--wait` waits up to 15 minutes for training and fails if the job fails. `knowledge wait --chatbot BOT_ID` does the same for everything training on a bot.
 - Exit code **0** means success; failures use a nonzero exit code and write the error to stderr: JSON in JSON mode, a message with a `→` next step in a terminal.
 
 Example error:
@@ -309,7 +319,7 @@ const result = await customer.call('chatbots_list');
 console.log(result.data);
 ```
 
-ESM with TypeScript declarations. Public exports: `createClient`, `request`, `waitForJob`. Importing the package does not start the CLI or MCP server. The library uses the same configuration fallback as the CLI.
+ESM with TypeScript declarations. Public exports: `createClient`, `request`, `waitForJob`, `waitForTraining`. Importing the package does not start the CLI or MCP server. The library uses the same configuration fallback as the CLI.
 
 ## Configuration
 

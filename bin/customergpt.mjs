@@ -9,9 +9,9 @@ import {serveStdio} from '../lib/mcp.mjs';
 import {version} from '../lib/version.mjs';
 import {parseCommand, help, commands, completions, completionScript} from '../lib/commands.mjs';
 import {render, renderError, palette, useColor} from '../lib/output.mjs';
-import {request, waitForJob} from '../lib/index.mjs';
+import {request, waitForJob, waitForTraining} from '../lib/index.mjs';
 import {attachFile} from '../lib/files.mjs';
-export {request, waitForJob} from '../lib/index.mjs';
+export {request, waitForJob, waitForTraining} from '../lib/index.mjs';
 const DASHBOARD = 'https://dashboard.customergpt.ai';
 // The same SKILL.md ships in this package and is served by the API for agents without it.
 const SKILL_URL = 'https://api.customergpt.ai/agents/customergpt-cli-skill.md';
@@ -112,7 +112,7 @@ export async function main(args) {
     action = 'onboarding_start'; input = {url:args[2]}; flags = args.slice(3);
   } else if (args[0] === 'call' && args[1]) { action = args[1]; flags = args.slice(2); }
   else throw new Error('Unknown command; use --help');
-  let wait = false;
+  let wait = false, waitAll = false;
   for (let i=0;i<flags.length;i++) {
     const flag = flags[i];
     if (flag === '--json' || flag === '--json-file') {
@@ -122,11 +122,26 @@ export async function main(args) {
       if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('--json must be an object');
       input = {...input,...data};
     } else if (flag === '--wait') wait = true;
+    else if (flag === '--wait-all') waitAll = true;
     else if (!['--yes','--dry-run'].includes(flag)) throw new Error('Unknown option: ' + flag);
   }
   if (flags.includes('--yes')) input.confirm = true;
   if (flags.includes('--dry-run')) { input.dryRun = true; input.confirm = false; }
   if (action === 'sources_add') input = await attachFile(input);
+  if (waitAll) {
+    if (action !== 'training_status' || !input.chatbotId) throw new Error('--wait-all works only with training_status and a chatbotId');
+    let last;
+    const onProgress = status => {
+      // Report only changes, so a long wait does not flood the log.
+      const state = JSON.stringify(status.active.map(item => [item.sourceId ?? item.jobId, item.status]));
+      if (quiet || state === last) return;
+      last = state;
+      if (!human) console.error(JSON.stringify({event:'training_progress',data:{chatbotId:status.chatbotId,idle:status.idle,active:status.active}}));
+      else console.error(c.dim(status.idle ? 'Nothing is training.' : 'Training '+status.active.length+': '+status.active.map(item => item.name+' ('+item.status+')').join(', ')+'…'));
+    };
+    print({ok:true,data:await waitForTraining(input.chatbotId,{...options,onProgress})},action);
+    return;
+  }
   const result = await request(action,input,options);
   if (wait && result.data?.id && ['pending','running'].includes(result.data.status)) {
     // Report the handle immediately on stderr so a interrupted process can be resumed.
@@ -148,7 +163,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   main(process.argv.slice(2)).catch(error => {
     const argv = process.argv.slice(2);
     if (humanOutput(argv, argv[0] !== 'call' && argv.includes('--json'), process.stderr)) console.error(renderError(error, palette(useColor(process.stderr))));
-    else console.error(JSON.stringify({ok:false,error:{code:error.code || 'CLI_ERROR',message:error.message,...(error.hint ? {hint:error.hint} : {})}, ...(error.job ? {job:error.job} : {})}));
+    else console.error(JSON.stringify({ok:false,error:{code:error.code || 'CLI_ERROR',message:error.message,...(error.hint ? {hint:error.hint} : {})}, ...(error.job ? {job:error.job} : {}), ...(error.training ? {training:error.training} : {})}));
     process.exitCode = 1;
   });
 }
