@@ -200,7 +200,9 @@ Every request identifies the client with an `X-CustomerGPT-Client: cli/<version>
 
 | Group | Available operations |
 | --- | --- |
-| Account | `login`, `logout`, `whoami`, `usage`, `profiles list`, `profiles use`, `dashboard` |
+| Account | `login`, `logout`, `whoami`, `usage`, `limits`, `profiles list`, `profiles use`, `dashboard` |
+| API keys | `tokens list`, `create`, `revoke` (owner only) |
+| Team | `members list`, `remove` (owner only) |
 | Diagnostics | `doctor` |
 | Bots | `chatbots list`, `get`, `create`, `update`, `delete` |
 | Training | `knowledge website add`, `knowledge links add`, `knowledge sitemap add`, `knowledge files add`, `knowledge text add`, `knowledge status`, `knowledge wait` |
@@ -232,7 +234,7 @@ customergpt conversations update CONVERSATION_ID --chatbot BOT_ID --status close
 
 Typos get a suggestion: `customergpt chatbts list` answers *Did you mean "customergpt chatbots list"?*, and `--limt` suggests `--limit`.
 
-Use `customergpt actions` for server-side input schemas. Named commands expose common options; `call` supports all fields in the action schema. Billing and team management are not currently supported by this CLI.
+Use `customergpt actions` for server-side input schemas. Named commands expose common options; `call` supports all fields in the action schema. Billing and inviting team members are not currently supported by this CLI.
 
 ## Automation and JSON
 
