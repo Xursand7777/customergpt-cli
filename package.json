@@ -42,7 +42,8 @@
     "ai",
     "ai-agent",
     "customer-support",
-    "knowledge-base"
+    "knowledge-base",
+    "support-automation"
   ],
   "homepage": "https://customergpt.ai",
   "repository": {
