@@ -4,28 +4,30 @@ import { readFile } from 'node:fs/promises';
 
 import {connection, readConfig, saveConfig, DEFAULT_BASE, normalizeBase, profiles} from '../lib/config.mjs';
 import {doctor} from '../lib/diagnostics.mjs';
-import {browserLogin, logout} from '../lib/login.mjs';
+import {browserLogin, logout, openBrowser} from '../lib/login.mjs';
+import {serveStdio} from '../lib/mcp.mjs';
+import {version} from '../lib/version.mjs';
 import {parseCommand, help, commands, completions, completionScript} from '../lib/commands.mjs';
 import {render, renderError, palette, useColor} from '../lib/output.mjs';
 import {request, waitForJob} from '../lib/index.mjs';
 export {request, waitForJob} from '../lib/index.mjs';
-const {version} = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+const DASHBOARD = 'https://dashboard.customergpt.ai';
 
-async function mcp(options) {
-  const {Server} = await import('@modelcontextprotocol/sdk/server/index.js');
-  const {StdioServerTransport} = await import('@modelcontextprotocol/sdk/server/stdio.js');
-  const {ListToolsRequestSchema,CallToolRequestSchema} = await import('@modelcontextprotocol/sdk/types.js');
-  const server = new Server({name:'customergpt-cli',version}, {capabilities:{tools:{}}});
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const credentials = await connection();
-    const catalog = await request(undefined,undefined,options);
-    return {tools:catalog.actions.filter(a => credentials.key || a.authentication === 'optional').map(({authentication,...tool}) => tool)};
+function mcp(options) {
+  const mcpOptions = {...options, mode:'mcp'};
+  return serveStdio({
+    name:'customergpt-cli', version,
+    listTools: async () => {
+      const credentials = await connection();
+      const catalog = await request(undefined,undefined,mcpOptions);
+      // Without credentials only anonymous onboarding tools are advertised.
+      return catalog.actions.filter(a => credentials.key || a.authentication === 'optional').map(({authentication,...tool}) => tool);
+    },
+    callTool: async (name, args) => {
+      try { return {content:[{type:'text',text:JSON.stringify(await request(name,args,mcpOptions))}]}; }
+      catch(error) { return {isError:true,content:[{type:'text',text:JSON.stringify({ok:false,error:{code:error.code || 'REQUEST_FAILED',message:error.message}})}]}; }
+    },
   });
-  server.setRequestHandler(CallToolRequestSchema, async call => {
-    try { return {content:[{type:'text',text:JSON.stringify(await request(call.params.name,call.params.arguments || {},options))}]}; }
-    catch(error) { return {isError:true,content:[{type:'text',text:JSON.stringify({ok:false,error:{code:error.code || 'REQUEST_FAILED',message:error.message}})}]}; }
-  });
-  await server.connect(new StdioServerTransport());
 }
 
 export async function main(args) {
@@ -68,6 +70,15 @@ export async function main(args) {
   if (!args.length || args.includes('--help') || args.includes('-h') || args[0] === 'help') {
     const prefix = args.filter(a => !['--help','-h','help'].includes(a)).join(' ');
     console.log(help(prefix)); return;
+  }
+  if (args[0] === 'dashboard') {
+    if (args.slice(1).some(a => a !== '--print')) throw new Error('Use dashboard [--print]');
+    const url = new URL(process.env.CUSTOMERGPT_DASHBOARD_URL || DASHBOARD);
+    if (url.protocol !== 'https:' && !['localhost','127.0.0.1'].includes(url.hostname)) throw new Error('CUSTOMERGPT_DASHBOARD_URL must use HTTPS');
+    const open = human && !args.includes('--print');
+    if (open) openBrowser(url.href);
+    print({ok:true,data:{url:url.href,...(open ? {message:'Opening '+url.href} : {})}},'dashboard');
+    return;
   }
   if (args[0] === 'completion') { process.stdout.write(completionScript(args[1])); return; }
   if (args[0] === 'doctor') { const result=await doctor(version,options); print(result,'doctor'); if(!result.ok) process.exitCode=1; return; }

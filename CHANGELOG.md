@@ -2,6 +2,22 @@
 
 All notable changes to `@customergpt/cli` are documented here. This project follows [Semantic Versioning](https://semver.org).
 
+## 0.5.0
+
+Lighter install, built on the SDK.
+
+### Added
+
+- `customergpt dashboard` opens the dashboard in your browser; `--print` (or a non-terminal) only prints the URL. `CUSTOMERGPT_DASHBOARD_URL` overrides it.
+- Every request sends `X-CustomerGPT-Client: cli/<version>`, or `mcp/<version>` from `customergpt mcp`, so the server can tell client versions apart. It never contains credentials.
+- `support@customergpt.ai` in the README and package metadata.
+
+### Changed
+
+- `customergpt mcp` uses a built-in MCP stdio server instead of `@modelcontextprotocol/sdk`. A global install drops from about 160 packages to 2 (`@customergpt/cli` and `@customergpt/sdk`). Tools, arguments and results are unchanged; protocol versions 2024-11-05 through 2025-11-25 are supported.
+- API requests go through [`@customergpt/sdk`](https://www.npmjs.com/package/@customergpt/sdk). Errors, hints, `--debug` tracing and the library exports are unchanged. Network failures and request timeouts now report `NETWORK_ERROR` and `TIMEOUT` codes with a hint.
+- Action names given to `call` must use lowercase letters and underscores, as every server action does.
+
 ## 0.4.0
 
 Readable output for people, unchanged JSON for scripts.

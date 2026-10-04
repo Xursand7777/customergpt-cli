@@ -161,6 +161,8 @@ customergpt knowledge website add https://example.com --chatbot BOT_ID --yes --w
 
 `doctor` checks the local Node.js version, config, server action catalog, OAuth issuer/PKCE and authenticated account access. It returns JSON and exits nonzero if any check fails. It does not create bots or send AI messages; an expired OAuth session may refresh normally. It reports your installed CLI version, not whether a newer npm version exists.
 
+Every request identifies the client with an `X-CustomerGPT-Client: cli/<version>` header (`mcp/<version>` from `customergpt mcp`); it never contains credentials.
+
 `--debug` logs API method, origin/path, status and elapsed time to stderr. It never logs request headers, bodies, URL query parameters or tokens. `--quiet` suppresses job-start progress, while preserving errors and explicitly requested debug output.
 
 `--timeout <seconds>` controls each agent API request and the total training wait (positive, up to 86400 seconds). Defaults are 180 seconds per API request and 900 seconds for training. For browser login it controls the approval wait; individual OAuth exchanges retain their 30-second network deadline. Timing out does not cancel server-side training.
@@ -169,7 +171,7 @@ customergpt knowledge website add https://example.com --chatbot BOT_ID --yes --w
 
 | Group | Available operations |
 | --- | --- |
-| Account | `login`, `logout`, `whoami`, `usage`, `profiles list`, `profiles use` |
+| Account | `login`, `logout`, `whoami`, `usage`, `profiles list`, `profiles use`, `dashboard` |
 | Diagnostics | `doctor` |
 | Bots | `chatbots list`, `get`, `create`, `update` |
 | Training | `knowledge website add`, `knowledge text add` |
@@ -260,7 +262,7 @@ Run `customergpt login` first, then add this configuration to a client that supp
 
 The client must be able to find the installed executable on its PATH. On Windows, some clients need `command: "cmd"` with `args: ["/c", "customergpt", "mcp"]` to launch the npm command shim.
 
-The server uses the saved session. For CI, pass `CUSTOMERGPT_API_KEY` via the client's environment; do not commit real keys in configuration examples. Without credentials, only anonymous tools are advertised. Stdout is reserved for the MCP protocol.
+The server uses the saved session. For CI, pass `CUSTOMERGPT_API_KEY` via the client's environment; do not commit real keys in configuration examples. Without credentials, only anonymous tools are advertised. Stdout is reserved for the MCP protocol. The server is built into the CLI with no extra dependencies and supports MCP protocol versions 2024-11-05 through 2025-11-25.
 
 Clients supporting remote MCP can connect to **https://api.customergpt.ai/api/mcp** and use OAuth instead. Actual tools are discovered from the deployed backend.
 
@@ -289,6 +291,7 @@ ESM with TypeScript declarations. Public exports: `createClient`, `request`, `wa
 | `CUSTOMERGPT_PROFILE` | Select a saved profile; overridden by `--profile` |
 | `CUSTOMERGPT_CONFIG_FILE` | Override the user config location |
 | `CUSTOMERGPT_OUTPUT` | `json` forces JSON output; `human` forces tables even when piped |
+| `CUSTOMERGPT_DASHBOARD_URL` | Dashboard opened by `customergpt dashboard`; default `https://dashboard.customergpt.ai` |
 | `NO_COLOR` / `FORCE_COLOR` | Disable or force colored output |
 
 `--api-base` overrides the server for a command. Otherwise the environment takes precedence over the saved server. Saved credentials are never sent to a different origin selected by an override. Public servers require HTTPS; loopback development servers can use HTTP.
@@ -338,6 +341,7 @@ Packaging runs tests and includes the executable, library, declarations, README 
 - [CustomerGPT website](https://customergpt.ai)
 - [Account dashboard](https://dashboard.customergpt.ai)
 - [Report a CLI issue](https://github.com/Xursand7777/customergpt-cli/issues)
+- Email: [support@customergpt.ai](mailto:support@customergpt.ai)
 
 Include your CLI and Node.js versions, command and redacted error. Never include API keys, session files or private preview tokens.
 
