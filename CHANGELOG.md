@@ -2,7 +2,9 @@
 
 All notable changes to `@customergpt/cli` are documented here. This project follows [Semantic Versioning](https://semver.org).
 
-## Unreleased
+## 0.8.0
+
+Train from documents.
 
 ### Added
 
