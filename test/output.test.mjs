@@ -81,7 +81,7 @@ test('leads list and --leads-only filter conversations to captured leads', () =>
 });
 
 test('completion offers subcommands, then the command flags', () => {
-  assert.deepEqual(new Set(completions(['knowledge'])), new Set(['website', 'links', 'sitemap', 'text', 'documents']));
+  assert.deepEqual(new Set(completions(['knowledge'])), new Set(['website', 'links', 'sitemap', 'files', 'text', 'documents']));
   assert.ok(completions([]).includes('leads'));
   const flags = completions(['knowledge', 'website', 'add', 'https://example.com']);
   for (const flag of ['--chatbot', '--max-pages', '--yes', '--dry-run', '--wait', '--json']) assert.ok(flags.includes(flag), flag);

@@ -94,7 +94,13 @@ customergpt knowledge links add https://example.com/pricing https://example.com/
 customergpt knowledge sitemap add https://example.com/sitemap.xml --chatbot BOT_ID --max-pages 20 --yes --wait
 ```
 
-`knowledge documents resync` repeats a link list or sitemap the way it was added. Compressed `sitemap.xml.gz` files are not supported.
+Train on documents (`.pdf`, `.docx`, `.md`, `.txt`, `.csv`, up to 10 MB each):
+
+```bash
+customergpt knowledge files add ./handbook.pdf --chatbot BOT_ID --yes --wait
+```
+
+The server extracts the text; scanned PDFs need OCR first. `knowledge documents resync` repeats a link list or sitemap the way it was added. Compressed `sitemap.xml.gz` files are not supported.
 
 ### 4. Test an answer
 
@@ -186,7 +192,7 @@ Every request identifies the client with an `X-CustomerGPT-Client: cli/<version>
 | Account | `login`, `logout`, `whoami`, `usage`, `profiles list`, `profiles use`, `dashboard` |
 | Diagnostics | `doctor` |
 | Bots | `chatbots list`, `get`, `create`, `update`, `delete` |
-| Training | `knowledge website add`, `knowledge links add`, `knowledge sitemap add`, `knowledge text add` |
+| Training | `knowledge website add`, `knowledge links add`, `knowledge sitemap add`, `knowledge files add`, `knowledge text add` |
 | Sources | `knowledge documents list`, `resync`, `delete` |
 | Preview | `messages send` |
 | Website installation | `installation snippet` |

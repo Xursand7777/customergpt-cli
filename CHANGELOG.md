@@ -2,6 +2,12 @@
 
 All notable changes to `@customergpt/cli` are documented here. This project follows [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Added
+
+- `knowledge files add <path>` trains on a `.pdf`, `.docx`, `.md`, `.txt` or `.csv` file up to 10 MB. The type and size are checked before upload; the server extracts the text. Requires a backend with document upload support.
+
 ## 0.7.0
 
 Train from link lists and sitemaps.
